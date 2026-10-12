@@ -260,20 +260,61 @@ function render() {
   renderMap(displayedRows); renderCharts(displayedRows); renderInsights(displayedRows); renderTable();
 }
 
-async function start() {
-  initControls();
-  if (typeof L === "undefined") { $("data-status").textContent = "地圖套件載入失敗，請重新整理頁面"; $("data-status").classList.add("error"); return; }
-  initMap();
+function formatTimestamp(value) {
+  const timestamp = value.includes(" ") ? value.replace(" ", "T") + "+08:00" : value;
+  const date = new Date(timestamp);
+  if (!Number.isFinite(date.getTime())) return "來源未提供，請查看資料平台";
+  return new Intl.DateTimeFormat("zh-TW", {
+    year:"numeric", month:"2-digit", day:"2-digit",
+    hour:"2-digit", minute:"2-digit", second:"2-digit",
+    hour12:false, timeZone:"Asia/Taipei"
+  }).format(date);
+}
+
+async function loadData() {
+  const button = $("reload-data"), status = $("data-status");
+  button.disabled = true;
+  status.classList.remove("ready", "error");
+  status.textContent = "正在讀取資料…";
   try {
     const response = await fetch("/api/aed", {cache:"no-store"});
-    if (!response.ok) throw new Error(`CSV 載入失敗 (${response.status})`);
-    allRows = parseCSV(await response.text());
-    if (!allRows.length) throw new Error("CSV 中沒有有效的座標資料");
-    selectedHospitals = new Set(availableHospitals().map((row) => row["最近急救醫院"]));
-    updateHospitalOptions(); render();
-    $("data-status").textContent = `已載入最新資料 · ${fmt(allRows.length)} 處`; $("data-status").classList.add("ready");
+    if (!response.ok) throw new Error("HTTP " + response.status);
+    const rows = parseCSV(await response.text());
+    if (!rows.length) throw new Error("CSV 中沒有有效的座標資料");
+
+    const isFirstLoad = !allRows.length;
+    allRows = rows;
+    const hospitals = availableHospitals().map((row) => row["最近急救醫院"]);
+    if (isFirstLoad) selectedHospitals = new Set(hospitals);
+    else selectedHospitals = new Set(hospitals.filter((name) => selectedHospitals.has(name)));
+
+    updateHospitalOptions();
+    render();
+    const updatedAt = response.headers.get("X-Data-Updated-At");
+    $("data-updated").textContent = updatedAt
+      ? formatTimestamp(updatedAt)
+      : "來源未提供，請查看資料平台";
+    $("data-fetched").textContent = formatTimestamp(new Date().toISOString());
+    status.textContent = "已載入資料 · " + fmt(allRows.length) + " 處";
+    status.classList.add("ready");
   } catch (error) {
-    console.error(error); $("data-status").textContent = error.message || "資料載入失敗"; $("data-status").classList.add("error");
+    console.error(error);
+    status.textContent = allRows.length ? "更新失敗，保留目前資料；請重試" : "資料載入失敗，請檢查連線後重試";
+    status.classList.add("error");
+  } finally {
+    button.disabled = false;
   }
+}
+
+function start() {
+  initControls();
+  $("reload-data").addEventListener("click", () => typeof L === "undefined" ? location.reload() : loadData());
+  if (typeof L === "undefined") {
+    $("data-status").textContent = "地圖套件載入失敗，請重新整理頁面";
+    $("data-status").classList.add("error");
+    return;
+  }
+  initMap();
+  loadData();
 }
 start();
