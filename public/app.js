@@ -155,7 +155,10 @@ function updateHospitalOptions() {
 
 function initMap() {
   map = L.map("map", {scrollWheelZoom:true}).setView([25.055,121.55],12);
-  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {maxZoom:19, attribution:"&copy; OpenStreetMap contributors"}).addTo(map);
+  L.tileLayer("https://wmts.nlsc.gov.tw/wmts/EMAP/default/GoogleMapsCompatible/{z}/{y}/{x}", {
+    maxZoom:19,
+    attribution:"&copy; <a href=\"https://maps.nlsc.gov.tw/\">內政部國土測繪中心</a>"
+  }).addTo(map);
   mapLayers = {clusters:L.layerGroup().addTo(map), hospitals:L.layerGroup().addTo(map), hot:L.layerGroup().addTo(map)};
 }
 function zoneKey(row) { return row.cluster >= 0 ? "hot" : row["至最近醫院距離_公尺"] >= Number($("cold-distance").value) ? "cold" : "normal"; }
