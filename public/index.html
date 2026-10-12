@@ -36,7 +36,7 @@
         <input id="min-samples" class="range" type="range" min="2" max="10" step="1" value="3" />
         <label class="slider-label" for="cold-distance"><span>冷區醫院距離門檻</span><output id="cold-distance-value">1,500 公尺</output></label>
         <input id="cold-distance" class="range" type="range" min="500" max="3000" step="100" value="1500" />
-        <div class="method-note"><span>ⓘ</span><p>熱區依 AED 座標進行 DBSCAN 空間分群；冷區依資料中的最近醫院距離判定。</p></div>
+        <div class="method-note"><span>ⓘ</span><p>熱區依 AED 座標進行 DBSCAN 空間分群；冷區依 AED 座標與急救責任醫院座標的直線距離判定。</p></div>
       </aside>
 
       <main class="content">
@@ -59,7 +59,7 @@
         <section id="insights" class="panel insights-panel"><div class="panel-heading"><div><span class="eyebrow">SPATIAL INSIGHTS</span><h2 id="insight-title">空間決策與資源優化建議</h2></div></div><div id="insight-body" class="insight-body"></div></section>
 
         <details class="panel table-panel"><summary><span><span class="eyebrow">DATA EXPLORER</span><strong id="table-title">詳細熱冷區分類數據</strong></span><span class="summary-count" id="table-count"></span></summary><div class="table-wrap"><table><thead><tr><th>行政區</th><th>場所名稱</th><th>區域型態</th><th>最近急救醫院</th><th class="numeric">送醫距離</th></tr></thead><tbody id="data-rows"></tbody></table></div><div class="table-footer"><span id="page-label"></span><div><button id="page-prev" class="page-button" type="button">上一頁</button><button id="page-next" class="page-button" type="button">下一頁</button></div></div></details>
-        <footer class="footer">臺北市 AED 空間分析 · 使用專案 CSV 資料 · 熱區分群於使用者瀏覽器即時運算</footer>
+        <footer class="footer">臺北市 AED 空間分析 · 資料來源：臺北市資料大平台（每次載入時取得最新 CSV）· 熱區分群於使用者瀏覽器即時運算</footer>
       </main>
     </div>
 

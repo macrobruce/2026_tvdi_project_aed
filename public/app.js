@@ -43,12 +43,23 @@ function parseCSV(text) {
   if (field || row.length) { row.push(field); rows.push(row); }
   const headers = (rows.shift() || []).map((name) => name.replace(/^\uFEFF/, "").trim());
   return rows.map((values) => Object.fromEntries(headers.map((key, i) => [key, values[i] ?? ""])))
-    .map((item) => ({...item,
-      "行政區": DISTRICTS.get(String(item["區域代碼"]).trim()) || "其他/未知",
-      "緯度": Number(item["緯度"]), "經度": Number(item["經度"]),
-      "至最近醫院距離_公尺": Number(item["至最近醫院距離_公尺"]),
-      "預估送醫車程_分鐘": Number(item["預估送醫車程_分鐘"])
-    })).filter((item) => Number.isFinite(item["緯度"]) && Number.isFinite(item["經度"]));
+    .map((item) => {
+      const latitude = Number(item["緯度"]), longitude = Number(item["經度"]);
+      const nearest = HOSPITALS.map(([name, lat, lon]) => ({
+        name,
+        distance: 6371000 * 2 * Math.asin(Math.sqrt(
+          Math.sin((latitude - lat) * Math.PI / 360) ** 2 +
+          Math.cos(latitude * Math.PI / 180) * Math.cos(lat * Math.PI / 180) *
+          Math.sin((longitude - lon) * Math.PI / 360) ** 2
+        ))
+      })).sort((a, b) => a.distance - b.distance)[0];
+      return {...item,
+        "行政區": DISTRICTS.get(String(item["區域代碼"]).trim()) || "其他/未知",
+        "緯度": latitude, "經度": longitude,
+        "最近急救醫院": nearest.name,
+        "至最近醫院距離_公尺": nearest.distance
+      };
+    }).filter((item) => Number.isFinite(item["緯度"]) && Number.isFinite(item["經度"]));
 }
 
 function dbscan(rows, radius, minSamples) {
@@ -251,13 +262,13 @@ async function start() {
   if (typeof L === "undefined") { $("data-status").textContent = "地圖套件載入失敗，請重新整理頁面"; $("data-status").classList.add("error"); return; }
   initMap();
   try {
-    const response = await fetch("taipei_aed_full_analysis.csv", {cache:"no-cache"});
+    const response = await fetch("/api/aed", {cache:"no-store"});
     if (!response.ok) throw new Error(`CSV 載入失敗 (${response.status})`);
     allRows = parseCSV(await response.text());
     if (!allRows.length) throw new Error("CSV 中沒有有效的座標資料");
     selectedHospitals = new Set(availableHospitals().map((row) => row["最近急救醫院"]));
     updateHospitalOptions(); render();
-    $("data-status").textContent = `資料已載入 · ${fmt(allRows.length)} 處`; $("data-status").classList.add("ready");
+    $("data-status").textContent = `已載入最新資料 · ${fmt(allRows.length)} 處`; $("data-status").classList.add("ready");
   } catch (error) {
     console.error(error); $("data-status").textContent = error.message || "資料載入失敗"; $("data-status").classList.add("error");
   }
