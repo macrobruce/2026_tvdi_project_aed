@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#10243a" />
+    <meta name="description" content="臺北市 AED 空間熱區與冷區決策分析儀表板" />
+    <title>臺北市 AED 空間分析儀表板</title>
+    <link rel="preconnect" href="https://unpkg.com" />
+    <link rel="preconnect" href="https://tile.openstreetmap.org" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <a class="brand" href="./" aria-label="臺北市 AED 儀表板首頁"><span class="brand-mark">AED</span><span>急救資源分析</span></a>
+      <span class="live-indicator"><i></i>資料載入後於瀏覽器即時計算</span>
+    </header>
+
+    <div class="page-shell">
+      <aside class="sidebar" aria-label="分析條件">
+        <div class="sidebar-heading"><span class="eyebrow">ANALYSIS CONTROLS</span><h2>分析條件</h2><p>調整區域與門檻，檢視 AED 空間分布。</p></div>
+        <label class="field-label" for="district">行政區</label>
+        <select id="district" class="control"></select>
+        <div class="field-row"><label class="field-label" for="hospital-search">急救責任醫院</label><button id="hospital-all" class="text-button" type="button">全選</button></div>
+        <input id="hospital-search" class="control search" type="search" placeholder="搜尋醫院" aria-label="搜尋醫院" />
+        <div id="hospital-options" class="hospital-options" aria-label="選擇醫院"></div>
+
+        <div class="sidebar-divider"></div>
+        <div class="sidebar-heading compact"><span class="eyebrow">DBSCAN &amp; COLD ZONE</span><h2>熱區與冷區門檻</h2></div>
+        <label class="slider-label" for="radius"><span>熱區搜尋半徑</span><output id="radius-value">50 公尺</output></label>
+        <input id="radius" class="range" type="range" min="10" max="200" step="10" value="50" />
+        <label class="slider-label" for="min-samples"><span>熱區最少 AED 台數</span><output id="min-samples-value">3 台</output></label>
+        <input id="min-samples" class="range" type="range" min="2" max="10" step="1" value="3" />
+        <label class="slider-label" for="cold-distance"><span>冷區醫院距離門檻</span><output id="cold-distance-value">1,500 公尺</output></label>
+        <input id="cold-distance" class="range" type="range" min="500" max="3000" step="100" value="1500" />
+        <div class="method-note"><span>ⓘ</span><p>熱區依 AED 座標進行 DBSCAN 空間分群；冷區依資料中的最近醫院距離判定。</p></div>
+      </aside>
+
+      <main class="content">
+        <section class="page-title"><div><span class="eyebrow">TAIPEI CITY · AED ACCESSIBILITY</span><h1>臺北市 AED 空間決策儀表板</h1><p>分析急救資源的熱區重疊與醫療可及性冷區</p></div><span id="data-status" class="data-status">正在讀取資料…</span></section>
+        <section class="section-heading"><div><span class="eyebrow">OVERVIEW</span><h2 id="kpi-title">核心數據指標</h2></div><span id="record-count" class="muted"></span></section>
+        <section class="kpi-grid" aria-label="核心數據指標">
+          <article class="kpi-card"><span class="kpi-icon teal">⌖</span><span class="kpi-label">AED 總數</span><strong id="kpi-total">—</strong><span id="kpi-area" class="kpi-footnote">處分析地點</span></article>
+          <article class="kpi-card"><span class="kpi-icon red">♨</span><span class="kpi-label">熱區重疊點位</span><strong id="kpi-hot">—</strong><span id="kpi-hot-ratio" class="kpi-footnote">高度密集聚落</span></article>
+          <article class="kpi-card"><span class="kpi-icon blue">❄</span><span class="kpi-label">高風險冷區</span><strong id="kpi-cold">—</strong><span id="kpi-cold-ratio" class="kpi-footnote">醫療孤島點位</span></article>
+          <article class="kpi-card"><span class="kpi-icon amber">↗</span><span class="kpi-label">最遠送醫距離</span><strong id="kpi-farthest">—</strong><span id="kpi-farthest-name" class="kpi-footnote">最近急救責任醫院</span></article>
+        </section>
+
+        <section class="panel map-panel"><div class="panel-heading"><div><span class="eyebrow">SPATIAL DISTRIBUTION</span><h2>熱區與冷區地圖</h2></div><div class="map-legend"><span><i class="legend-dot hot"></i>熱區</span><span><i class="legend-dot cold"></i>冷區</span><span><i class="legend-dot normal"></i>一般 AED</span><span><i class="legend-dot hospital"></i>醫院</span></div></div><div id="map" role="application" aria-label="AED 空間分布地圖"></div><p class="map-caption">點選標記查看場所、地址、區域分類與最近醫院距離。地圖底圖 © OpenStreetMap contributors。</p></section>
+
+        <section class="chart-grid">
+          <article class="panel chart-panel"><div class="panel-heading"><div><span class="eyebrow">ZONE COMPOSITION</span><h2>空間型態占比</h2></div></div><div class="donut-layout"><div id="zone-donut" class="donut"><div class="donut-hole"><strong id="donut-total">—</strong><span>AED</span></div></div><div id="zone-legend" class="chart-legend"></div></div></article>
+          <article class="panel chart-panel"><div class="panel-heading"><div><span class="eyebrow">HOSPITAL DISTRIBUTION</span><h2>各醫院負責之區域型態</h2></div></div><div id="hospital-chart" class="hospital-chart"></div></article>
+        </section>
+
+        <section id="insights" class="panel insights-panel"><div class="panel-heading"><div><span class="eyebrow">SPATIAL INSIGHTS</span><h2 id="insight-title">空間決策與資源優化建議</h2></div></div><div id="insight-body" class="insight-body"></div></section>
+
+        <details class="panel table-panel"><summary><span><span class="eyebrow">DATA EXPLORER</span><strong id="table-title">詳細熱冷區分類數據</strong></span><span class="summary-count" id="table-count"></span></summary><div class="table-wrap"><table><thead><tr><th>行政區</th><th>場所名稱</th><th>區域型態</th><th>最近急救醫院</th><th class="numeric">送醫距離</th></tr></thead><tbody id="data-rows"></tbody></table></div><div class="table-footer"><span id="page-label"></span><div><button id="page-prev" class="page-button" type="button">上一頁</button><button id="page-next" class="page-button" type="button">下一頁</button></div></div></details>
+        <footer class="footer">臺北市 AED 空間分析 · 使用專案 CSV 資料 · 熱區分群於使用者瀏覽器即時運算</footer>
+      </main>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+    <script src="app.js" defer></script>
+  </body>
+</html>
